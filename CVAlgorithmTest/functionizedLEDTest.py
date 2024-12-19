@@ -127,6 +127,7 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
 
     imageSection = 0
 
+    # If a surrounding sixe factor is selected, the area under consideration is changed (inc for +, dec for -)
     if surroundingSizeFactor != 0:
         X1 = np.uint16(X1 - img.shape[1] * surroundingSizeFactor)
         Y1 = np.uint16(Y1 - img.shape[0] * surroundingSizeFactor)
@@ -134,25 +135,43 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
         Y2 = np.uint16(Y2 + img.shape[0] * surroundingSizeFactor)
 
         if not interpretInnerArea:
+
             analysisArea = cv.rectangle(blank.copy(), (X1, Y1), (X2, Y2), 255, -1)
 
             mask = cv.bitwise_xor(innerArea, analysisArea)
 
             maskedImg = cv.bitwise_and(img, img, mask=mask)
-            cv.imshow(f'hi{i}', maskedImg)
+            # cv.imshow(f'hi{i}', maskedImg)
 
-            imageSection = img[Y1:Y2, X1:X2]
+            imageSection = maskedImg[Y1:Y2, X1:X2]
+
         else:
+
             imageSection = img[Y1:Y2, X1:X2]
 
     #hsvImageSection = cv.cvtColor(imageSection, cv.COLOR_BGR2HSV)
 
     #cv.imshow('hi', hsvImageSection)
-
     # print(imageSection)
-    averageRGBColor = np.mean(imageSection, axis = (0, 1))
+    # print(imageSection)
 
-    #averageHSVColor = np.mean(hsvImageSection, axis = (0, 1))
+    filteredSection = []
+
+    for i in imageSection:
+        for pixel in i:
+
+            pixelValue = sum(pixel)
+
+            if pixelValue != 0:
+                # print(pixel)
+                filteredSection.append(pixel)
+
+    # print(filteredSection)
+
+    averageRGBColor = np.mean(filteredSection, axis = (0))
+
+
+    convertBGRToHSV(averageRGBColor)
 
 
     if drawShape:
@@ -163,6 +182,49 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
 
     # print(X1, X2)
     # print(Y1, Y2)
+
+# This function created with help from https://www.geeksforgeeks.org/program-change-rgb-color-model-hsv-color-model/
+# This function takes an array of [b, g, r] format and converts it to [h, s, v]
+def convertBGRToHSV(bgrArray):
+
+    reducedArray = bgrArray/255
+
+    cMax = np.max(reducedArray)
+    cMin = np.min(reducedArray)
+
+    diff = cMax - cMin
+
+    blue, green, red = reducedArray
+
+    hue, saturation, value = [0, 0, 0]
+
+    if cMax == cMin:
+        hue = 0
+
+    if cMax == red:
+
+        hue = ((60 * ((green - blue) / diff) + 360) % 360)
+
+    elif cMax == green:
+
+        hue = ((60 * ((blue - red) / diff) + 120) % 360)
+
+    else:
+
+        hue = ((60 * ((red - green) / diff) + 240) % 360)
+    
+    if cMax == 0:
+        saturation = 0
+    else:
+        saturation = (diff / cMax) * 100
+    
+    value = cMax * 100
+
+    hsvArray = np.array([hue, saturation, value])
+    hsvArray = hsvArray.astype('uint16')
+
+    print(hsvArray)
+
 
 updatedImg = detectLEDs(ledImage)
 cv.imshow('Circles?????', updatedImg)
