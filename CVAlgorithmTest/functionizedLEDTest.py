@@ -5,6 +5,11 @@ import numpy as np
 ledImage = cv.imread('purpleLED.jpg')
 
 def detectLEDs(img):
+
+    blank = np.zeros(img.shape[:2], dtype='uint8')
+
+    #cv.imshow('blank', blank)
+
     # Sets the image to grayscasle
     grayscaleImg = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
@@ -65,6 +70,7 @@ def detectLEDs(img):
     xCoordinatesArray = np.array(xCoordinatesArray, dtype=np.uint32)
     yCoordinatesArray = np.array(yCoordinatesArray, dtype=np.uint32)
 
+
     # Loops through the arrays of coordinates, calculates their centers, and the radii the ellipse would have to be to include the extrema
     # The program then circles where the light is detected, provides its center and prints text to indicate the different LEDs
     for i in range (0, len(xCoordinatesArray)):
@@ -91,11 +97,16 @@ def detectLEDs(img):
         # print(f'radius: ({xRadius}, {yRadius})')
         # print(f'axes: {axes}')
 
+        innerArea = cv.ellipse(blank.copy(), center, axes, 0, 0, 360, 255, -1)
+        findAvgColor((xCoordinate[0], yCoordinate[0]), (xCoordinate[1], yCoordinate[1]), img, innerArea, i, drawShape = True, surroundingSizeFactor = 0.005)
+
         detectedLight = cv.ellipse(img, center, axes, 0, 0, 360, (0, 255, 0), 2)
         detectedLightCenter = cv.circle(img, center, 1, (0, 0, 255), 3)
 
         textOrigin = center - 25
-        findAvgColor((xCoordinate[0], yCoordinate[0]), (xCoordinate[1], yCoordinate[1]), img, True, 0.005)
+
+        #cv.imshow(f'hi{i}',innerArea)
+
 
         #print(textOrigin)
 
@@ -106,19 +117,33 @@ def detectLEDs(img):
 
 # surroundingSizeFactor is the amount of which to increase the image area which is considered by this function
 # Based on the size of the entire image (ex. if the image is 300x300, a 0.01 scale factor would add 3 pixels to each side of the rectangle of which is assessed in the averaging)
-# Be aware that generally small scale factors are required.
-def findAvgColor(startCoordinates, endCoordinates, img, drawShape=None, surroundingSizeFactor=0):
+# Be aware that generally small scale factors are required. Negative values are accepted.
+def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretInnerArea=False, drawShape=None, surroundingSizeFactor=0):
+
+    blank = np.zeros(img.shape[:2], dtype='uint8')
+
     X1, Y1 = startCoordinates
     X2, Y2 = endCoordinates
 
-    if surroundingSizeFactor != 1:
+    imageSection = 0
+
+    if surroundingSizeFactor != 0:
         X1 = np.uint16(X1 - img.shape[1] * surroundingSizeFactor)
         Y1 = np.uint16(Y1 - img.shape[0] * surroundingSizeFactor)
         X2 = np.uint16(X2 + img.shape[1] * surroundingSizeFactor)
         Y2 = np.uint16(Y2 + img.shape[0] * surroundingSizeFactor)
 
+        if not interpretInnerArea:
+            analysisArea = cv.rectangle(blank.copy(), (X1, Y1), (X2, Y2), 255, -1)
 
-    imageSection = img[Y1:Y2, X1:X2]
+            mask = cv.bitwise_xor(innerArea, analysisArea)
+
+            maskedImg = cv.bitwise_and(img, img, mask=mask)
+            cv.imshow(f'hi{i}', maskedImg)
+
+            imageSection = img[Y1:Y2, X1:X2]
+        else:
+            imageSection = img[Y1:Y2, X1:X2]
 
     #hsvImageSection = cv.cvtColor(imageSection, cv.COLOR_BGR2HSV)
 
