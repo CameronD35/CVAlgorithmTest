@@ -98,7 +98,7 @@ def detectLEDs(img):
         # print(f'axes: {axes}')
 
         innerArea = cv.ellipse(blank.copy(), center, axes, 0, 0, 360, 255, -1)
-        findAvgColor((xCoordinate[0], yCoordinate[0]), (xCoordinate[1], yCoordinate[1]), img, innerArea, i, drawShape = True, surroundingSizeFactor = 0.005)
+        findAvgColor((xCoordinate[0], yCoordinate[0]), (xCoordinate[1], yCoordinate[1]), img, innerArea, drawShape = True, surroundingSizeFactor = 0.005)
 
         detectedLight = cv.ellipse(img, center, axes, 0, 0, 360, (0, 255, 0), 2)
         detectedLightCenter = cv.circle(img, center, 1, (0, 0, 255), 3)
@@ -115,25 +115,31 @@ def detectLEDs(img):
     return img
     # print(len(contours))
 
+# innerArea is a binary image which contains the high intensity pixels (essentially where the LED is detected)
+
+# interpretInnerArea is a boolean that tells the program to include interpretation of the detected LED. 
+# IN most cases, due to the nature of cameras this will pollute the average with a TON of average
+
 # surroundingSizeFactor is the amount of which to increase the image area which is considered by this function
 # Based on the size of the entire image (ex. if the image is 300x300, a 0.01 scale factor would add 3 pixels to each side of the rectangle of which is assessed in the averaging)
 # Be aware that generally small scale factors are required. Negative values are accepted.
-def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretInnerArea=False, drawShape=None, surroundingSizeFactor=0):
+def findAvgColor(startCoordinates, endCoordinates, img, innerArea, interpretInnerArea=False, drawShape=None, surroundingSizeFactor=0):
 
+    # Create a blank to generate binary image later
     blank = np.zeros(img.shape[:2], dtype='uint8')
-
     X1, Y1 = startCoordinates
     X2, Y2 = endCoordinates
 
     imageSection = 0
 
-    # If a surrounding sixe factor is selected, the area under consideration is changed (inc for +, dec for -)
+    # If a surrounding size factor is selected, the area under consideration is changed (inc for +, dec for -)
     if surroundingSizeFactor != 0:
         X1 = np.uint16(X1 - img.shape[1] * surroundingSizeFactor)
         Y1 = np.uint16(Y1 - img.shape[0] * surroundingSizeFactor)
         X2 = np.uint16(X2 + img.shape[1] * surroundingSizeFactor)
         Y2 = np.uint16(Y2 + img.shape[0] * surroundingSizeFactor)
 
+        # Skips interpretting the inner area
         if not interpretInnerArea:
 
             analysisArea = cv.rectangle(blank.copy(), (X1, Y1), (X2, Y2), 255, -1)
@@ -145,9 +151,15 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
 
             imageSection = maskedImg[Y1:Y2, X1:X2]
 
+        # Includes inner area in interpretation
         else:
 
             imageSection = img[Y1:Y2, X1:X2]
+
+    # Only interprets inner area
+    else:
+
+        imageSection = img[Y1:Y2, X1:X2]
 
     #hsvImageSection = cv.cvtColor(imageSection, cv.COLOR_BGR2HSV)
 
@@ -157,8 +169,10 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
 
     filteredSection = []
 
-    for i in imageSection:
-        for pixel in i:
+    # Removes any black pixels form the image as it can pollute averaging
+    for pixelSet in imageSection:
+
+        for pixel in pixelSet:
 
             pixelValue = sum(pixel)
 
@@ -177,6 +191,7 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
 
     print(color, colorDesc)
 
+    # Draws rectangle on the original image
     if drawShape:
         rec = cv.rectangle(img, (X1, Y1), (X2, Y2), (255, 0, 0), 2)
 
@@ -192,7 +207,10 @@ def convertBGRToHSV(bgrArray):
 
     reducedArray = bgrArray/255
 
+    # cMax is the color with the most intensity 
     cMax = np.max(reducedArray)
+
+    # cMin is the color with the least intensity 
     cMin = np.min(reducedArray)
 
     diff = cMax - cMin
@@ -228,7 +246,9 @@ def convertBGRToHSV(bgrArray):
 
     return hsvArray
 
+# This function takes a color array in the format of [h, s, v] and gets a rough determination of the color
 def determineColor(hsvArray):
+
     saturation = hsvArray[1]
     saturationType = ''
     # Saturation Type Calculation
@@ -242,6 +262,7 @@ def determineColor(hsvArray):
     value = hsvArray[2]
     valueType = ''
 
+    # Value Type Calculation
     if value >= 65:
         valueType = 'Bright'
     elif value >= 30:
@@ -252,6 +273,8 @@ def determineColor(hsvArray):
     hue = hsvArray[0]
     color = ''
 
+    # A beautiful and elegant set of code
+    # Trust me, I'm a professional
     if hue >= 300:
         color = 'Red'
     elif hue >= 250:
