@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import colors
 
 # Reads in the image
 ledImage = cv.imread('purpleLED.jpg')
@@ -271,28 +272,21 @@ def determineColor(hsvArray):
         valueType = 'Dark'
 
     hue = hsvArray[0]
-    color = ''
+    detectedColor = ''
 
-    # A beautiful and elegant set of code
-    # Trust me, I'm a professional
-    if hue >= 300:
-        color = 'Red'
-    elif hue >= 250:
-        color = 'Purple'
-    elif hue >= 165:
-        color = 'Purple'
-    elif hue >= 85:
-        color = 'Green'
-    elif hue >= 55:
-        color = 'Yellow'
-    elif hue >= 15:
-        color = 'Orange'
-    else:
-        color = 'Red'
+    colorMap = colors.colorMap
+    # Just know this is better than the endless amount of if-elif-else statements
+    # Regardless, this grabs the dictionary of colors from the colors.py file
+    # It uses the provided minimum hues to determine the color
+    for color in colorMap:
+        minColorHue = colorMap[color]
+        if hue >= minColorHue:
+            detectedColor = color
+            break
 
-    colorDescription = saturationType + ' ' + valueType + ' ' + color
+    colorDescription = saturationType + ' ' + valueType + ' ' + detectedColor
 
-    return color, colorDescription
+    return detectedColor, colorDescription
     
 
 updatedImg = detectLEDs(ledImage)
