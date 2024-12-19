@@ -87,20 +87,57 @@ def detectLEDs(img):
 
         axes = np.array([majorAxis, minorAxis], dtype=np.uint32)
 
-        print(f'center: {center}')
-        print(f'radius: ({xRadius}, {yRadius})')
-        print(f'axes: {axes}')
+        # print(f'center: {center}')
+        # print(f'radius: ({xRadius}, {yRadius})')
+        # print(f'axes: {axes}')
 
         detectedLight = cv.ellipse(img, center, axes, 0, 0, 360, (0, 255, 0), 2)
         detectedLightCenter = cv.circle(img, center, 1, (0, 0, 255), 3)
 
         textOrigin = center - 25
+        findAvgColor((xCoordinate[0], yCoordinate[0]), (xCoordinate[1], yCoordinate[1]), img, True, 0.005)
 
-        print(textOrigin)
+        #print(textOrigin)
+
         detectedLightText = cv.putText(img, f'LED {i}', textOrigin, cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv.LINE_AA)
 
     return img
     # print(len(contours))
+
+# surroundingSizeFactor is the amount of which to increase the image area which is considered by this function
+# Based on the size of the entire image (ex. if the image is 300x300, a 0.01 scale factor would add 3 pixels to each side of the rectangle of which is assessed in the averaging)
+# Be aware that generally small scale factors are required.
+def findAvgColor(startCoordinates, endCoordinates, img, drawShape=None, surroundingSizeFactor=0):
+    X1, Y1 = startCoordinates
+    X2, Y2 = endCoordinates
+
+    if surroundingSizeFactor != 1:
+        X1 = np.uint16(X1 - img.shape[1] * surroundingSizeFactor)
+        Y1 = np.uint16(Y1 - img.shape[0] * surroundingSizeFactor)
+        X2 = np.uint16(X2 + img.shape[1] * surroundingSizeFactor)
+        Y2 = np.uint16(Y2 + img.shape[0] * surroundingSizeFactor)
+
+
+    imageSection = img[Y1:Y2, X1:X2]
+
+    #hsvImageSection = cv.cvtColor(imageSection, cv.COLOR_BGR2HSV)
+
+    #cv.imshow('hi', hsvImageSection)
+
+    # print(imageSection)
+    averageRGBColor = np.mean(imageSection, axis = (0, 1))
+
+    #averageHSVColor = np.mean(hsvImageSection, axis = (0, 1))
+
+
+    if drawShape:
+        rec = cv.rectangle(img, (X1, Y1), (X2, Y2), (255, 0, 0), 2)
+
+    #print(averageHSVColor)
+
+
+    # print(X1, X2)
+    # print(Y1, Y2)
 
 updatedImg = detectLEDs(ledImage)
 cv.imshow('Circles?????', updatedImg)
