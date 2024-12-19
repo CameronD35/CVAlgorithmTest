@@ -171,8 +171,11 @@ def findAvgColor(startCoordinates, endCoordinates, img, innerArea, i, interpretI
     averageRGBColor = np.mean(filteredSection, axis = (0))
 
 
-    convertBGRToHSV(averageRGBColor)
+    hsvArray = convertBGRToHSV(averageRGBColor)
 
+    color, colorDesc = determineColor(hsvArray)
+
+    print(color, colorDesc)
 
     if drawShape:
         rec = cv.rectangle(img, (X1, Y1), (X2, Y2), (255, 0, 0), 2)
@@ -223,8 +226,51 @@ def convertBGRToHSV(bgrArray):
     hsvArray = np.array([hue, saturation, value])
     hsvArray = hsvArray.astype('uint16')
 
-    print(hsvArray)
+    return hsvArray
 
+def determineColor(hsvArray):
+    saturation = hsvArray[1]
+    saturationType = ''
+    # Saturation Type Calculation
+    if saturation >= 65:
+        saturationType = 'Vivid'
+    elif saturation >= 30:
+        saturationType = 'Intermediate'
+    else:
+        saturationType = 'Dull'
+
+    value = hsvArray[2]
+    valueType = ''
+
+    if value >= 65:
+        valueType = 'Bright'
+    elif value >= 30:
+        valueType = 'Midtone'
+    else:
+        valueType = 'Dark'
+
+    hue = hsvArray[0]
+    color = ''
+
+    if hue >= 300:
+        color = 'Red'
+    elif hue >= 250:
+        color = 'Purple'
+    elif hue >= 165:
+        color = 'Purple'
+    elif hue >= 85:
+        color = 'Green'
+    elif hue >= 55:
+        color = 'Yellow'
+    elif hue >= 15:
+        color = 'Orange'
+    else:
+        color = 'Red'
+
+    colorDescription = saturationType + ' ' + valueType + ' ' + color
+
+    return color, colorDescription
+    
 
 updatedImg = detectLEDs(ledImage)
 cv.imshow('Circles?????', updatedImg)
